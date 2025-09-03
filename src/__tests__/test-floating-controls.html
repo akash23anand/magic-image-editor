@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Controls Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .image-container {
+            position: relative;
+            display: inline-block;
+            border: 1px solid #ccc;
+            margin: 20px 0;
+        }
+        .test-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .controls {
+            position: fixed;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 200px;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        }
+        .controls.dragging {
+            cursor: grabbing;
+        }
+        .controls label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .controls select, .controls input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 4px;
+            font-size: 12px;
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Floating Controls Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Configuration</h2>
+            <div class="instructions">
+                <strong>Instructions:</strong>
+                <ul>
+                    <li>Resize the window to see controls reposition</li>
+                    <li>Drag the controls panel to reposition it</li>
+                    <li>Change image size to test collision detection</li>
+                    <li>Controls should never overlap the image</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Image Container</h2>
+            <div class="image-container" id="imageContainer">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23f0f0f0'/%3E%3Ctext x='200' y='150' text-anchor='middle' font-size='20' fill='%23333'%3ETest Image%3C/text%3E%3C/svg%3E" 
+                     alt="Test Image" 
+                     class="test-image" 
+                     id="testImage">
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Controls</h2>
+            <div class="controls" id="floatingControls">
+                <div style="margin-bottom: 10px; font-weight: bold;">Highlight Controls</div>
+                
+                <label>Mode:</label>
+                <select id="highlightMode">
+                    <option value="line">Line (Recommended)</option>
+                    <option value="block">Block</option>
+                    <option value="word">Word</option>
+                </select>
+                
+                <label>Min Confidence: <span id="confidenceValue">70</span>%</label>
+                <input type="range" id="confidenceSlider" min="0" max="100" value="70">
+                
+                <label>Min Area: <span id="areaValue">100</span>px²</label>
+                <input type="range" id="areaSlider" min="10" max="500" value="100">
+                
+                <div style="margin-top: 10px; font-size: 11px; opacity: 0.8;">
+                    Drag to reposition
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Actions</h2>
+            <button onclick="resizeImage('small')">Small Image (200x150)</button>
+            <button onclick="resizeImage('medium')">Medium Image (400x300)</button>
+            <button onclick="resizeImage('large')">Large Image (800x600)</button>
+            <button onclick="resizeWindow('small')">Small Window</button>
+            <button onclick="resizeWindow('large')">Large Window</button>
+            <button onclick="resetControls()">Reset Controls</button>
+        </div>
+    </div>
+
+    <script>
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        const controls = document.getElementById('floatingControls');
+        const imageContainer = document.getElementById('imageContainer');
+        const testImage = document.getElementById('testImage');
+
+        function placeControls() {
+            if (!controls || !imageContainer) return;
+
+            const imgRect = imageContainer.getBoundingClientRect();
+            const controlsRect = controls.getBoundingClientRect();
+            const MARGIN = 12;
+            const MIN_EDGE = 8;
+
+            const tryLeft = () => ({ left: imgRect.left - controlsRect.width - MARGIN, top: imgRect.top + MARGIN });
+            const tryRight = () => ({ left: imgRect.right + MARGIN, top: imgRect.top + MARGIN });
+            const tryAbove = () => ({ 
+                left: Math.max(MIN_EDGE, imgRect.left + MARGIN), 
+                top: Math.max(MIN_EDGE, imgRect.top - controlsRect.height - MARGIN) 
+            });
+            const tryBelow = () => ({ 
+                left: Math.max(MIN_EDGE, imgRect.left + MARGIN), 
+                top: Math.min(window.innerHeight - controlsRect.height - MIN_EDGE, imgRect.bottom + MARGIN) 
+            });
+
+            const fits = (pos) =>
+                pos.left >= MIN_EDGE && 
+                pos.left + controlsRect.width <= window.innerWidth - MIN_EDGE &&
+                pos.top >= MIN_EDGE && 
+                pos.top + controlsRect.height <= window.innerHeight - MIN_EDGE;
+
+            let next = tryLeft();
+            if (!fits(next)) next = tryRight();
+            if (!fits(next)) next = tryAbove();
+            if (!fits(next)) next = tryBelow();
+
+            controls.style.left = next.left + 'px';
+            controls.style.top = next.top + 'px';
+        }
+
+        function handleMouseDown(e) {
+            const rect = controls.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            isDragging = true;
+            controls.classList.add('dragging');
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging) return;
+            
+            controls.style.left = (e.clientX - dragOffset.x) + 'px';
+            controls.style.top = (e.clientY - dragOffset.y) + 'px';
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            controls.classList.remove('dragging');
+        }
+
+        // Event listeners
+        controls.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        // Reposition on resize
+        window.addEventListener('resize', placeControls);
+
+        // Image resize observer
+        const resizeObserver = new ResizeObserver(placeControls);
+        resizeObserver.observe(imageContainer);
+
+        // Test functions
+        function resizeImage(size) {
+            switch(size) {
+                case 'small':
+                    testImage.style.width = '200px';
+                    testImage.style.height = '150px';
+                    break;
+                case 'medium':
+                    testImage.style.width = '400px';
+                    testImage.style.height = '300px';
+                    break;
+                case 'large':
+                    testImage.style.width = '800px';
+                    testImage.style.height = '600px';
+                    break;
+            }
+            setTimeout(placeControls, 100);
+        }
+
+        function resizeWindow(size) {
+            if (size === 'small') {
+                window.resizeTo(600, 400);
+            } else {
+                window.resizeTo(1200, 800);
+            }
+            setTimeout(placeControls, 100);
+        }
+
+        function resetControls() {
+            placeControls();
+        }
+
+        // Initialize
+        placeControls();
+
+        // Update value displays
+        document.getElementById('confidenceSlider').addEventListener('input', (e) => {
+            document.getElementById('confidenceValue').textContent = e.target.value;
+        });
+
+        document.getElementById('areaSlider').addEventListener('input', (e) => {
+            document.getElementById('areaValue').textContent = e.target.value;
+        });
+    </script>
+</body>
+</html>

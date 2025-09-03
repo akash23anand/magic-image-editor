@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Magic Eraser</title>
+</head>
+<body>
+    <h1>Magic Eraser Test</h1>
+    <p>This page will automatically upload test-objects.png and click the magic eraser tool.</p>
+    
+    <script>
+        // Wait for page to load
+        window.addEventListener('load', async () => {
+            // Wait a bit for React app to initialize
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Get the file input
+            const fileInput = document.querySelector('input[type="file"]');
+            if (!fileInput) {
+                console.error('File input not found');
+                return;
+            }
+            
+            // Fetch the test image
+            const response = await fetch('/test-objects.png');
+            const blob = await response.blob();
+            const file = new File([blob], 'test-objects.png', { type: 'image/png' });
+            
+            // Create a DataTransfer to simulate file selection
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            
+            // Trigger change event
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+            
+            console.log('Image uploaded');
+            
+            // Wait for image to load
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Click magic eraser tool
+            const magicEraserButton = Array.from(document.querySelectorAll('button')).find(
+                btn => btn.title === 'Magic Eraser'
+            );
+            
+            if (magicEraserButton) {
+                magicEraserButton.click();
+                console.log('Magic eraser tool clicked');
+            } else {
+                console.error('Magic eraser button not found');
+            }
+        });
+    </script>
+</body>
+</html>

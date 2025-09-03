@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Logging & Tools Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        #logs { margin: 20px 0; padding: 10px; background: #f0f0f0; max-height: 300px; overflow-y: scroll; }
+        .log-entry { margin: 2px 0; font-family: monospace; font-size: 12px; }
+        .log-info { color: blue; }
+        .log-error { color: red; }
+        .log-warn { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Logging & Tools Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Logging</h2>
+        <button onclick="testGrabTextLogging()">Test Grab Text Logging</button>
+        <button onclick="testBackgroundRemovalLogging()">Test BG Removal Logging</button>
+        <button onclick="testMagicGrabLogging()">Test Magic Grab Logging</button>
+        <button onclick="showLogs()">Show All Logs</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Tools</h2>
+        <button onclick="testTool('bg-remover')">Test BG Remover</button>
+        <button onclick="testTool('grab-text')">Test Grab Text</button>
+        <button onclick="testTool('magic-grab')">Test Magic Grab</button>
+        <button onclick="testTool('bg-generator')">Test BG Generator</button>
+    </div>
+    
+    <div id="logs"></div>
+
+    <script type="module">
+        import { e2eLogger } from '../src/utils/E2ELogger.js';
+        import { unifiedAIService } from '../src/services/UnifiedAIService.js';
+        
+        // Create test image data
+        function createTestImageData() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 200;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a simple test image with text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 200, 200);
+            ctx.fillStyle = '#000000';
+            ctx.font = '20px Arial';
+            ctx.fillText('TEST', 50, 100);
+            
+            return ctx.getImageData(0, 0, 200, 200);
+        }
+        
+        window.testGrabTextLogging = async () => {
+            log('Testing grab text logging...');
+            try {
+                const imageData = createTestImageData();
+                const result = await unifiedAIService.processImage('grab-text', imageData);
+                log('Grab text completed successfully', 'info');
+                log(`Extracted text: ${result.text || 'No text found'}`, 'info');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testBackgroundRemovalLogging = async () => {
+            log('Testing background removal logging...');
+            try {
+                const imageData = createTestImageData();
+                const result = await unifiedAIService.processImage('bg-remover', imageData);
+                log('Background removal completed successfully', 'info');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testMagicGrabLogging = async () => {
+            log('Testing magic grab logging...');
+            try {
+                const imageData = createTestImageData();
+                const result = await unifiedAIService.processImage('magic-grab', imageData, { 
+                    prompt: JSON.stringify({ x: 100, y: 100 }) 
+                });
+                log('Magic grab completed successfully', 'info');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testTool = async (tool) => {
+            log(`Testing ${tool}...`);
+            try {
+                const imageData = createTestImageData();
+                let options = {};
+                
+                switch (tool) {
+                    case 'bg-generator':
+                        options = { prompt: 'blue sky background' };
+                        break;
+                    case 'magic-grab':
+                        options = { prompt: JSON.stringify({ x: 100, y: 100 }) };
+                        break;
+                }
+                
+                const result = await unifiedAIService.processImage(tool, imageData, options);
+                log(`${tool} completed successfully`, 'info');
+                log(`Metadata: ${JSON.stringify(result.metadata)}`, 'info');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'warn');
+                log(`This is expected if Stable Diffusion API is not running`, 'warn');
+            }
+        };
+        
+        window.showLogs = () => {
+            const logs = e2eLogger.getLogs();
+            const logsDiv = document.getElementById('logs');
+            logsDiv.innerHTML = '<h3>All Logs:</h3>';
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = `log-entry log-${log.level.toLowerCase()}`;
+                div.textContent = `[${log.timestamp}] ${log.level} [${log.component}] ${log.action}: ${JSON.stringify(log.details)}`;
+                logsDiv.appendChild(div);
+            });
+        };
+        
+        window.clearLogs = () => {
+            e2eLogger.clearLogs();
+            document.getElementById('logs').innerHTML = '<h3>Logs cleared</h3>';
+        };
+        
+        function log(message, level = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = `log-entry log-${level}`;
+            div.textContent = `[${new Date().toISOString()}] ${message}`;
+            logsDiv.appendChild(div);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        // Initial log
+        log('Test page loaded - logging system ready');
+    </script>
+</body>
+</html>

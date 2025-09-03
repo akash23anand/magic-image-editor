@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Overlay Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .controls label {
+            display: inline-block;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .controls select, .controls input {
+            margin-right: 20px;
+            padding: 5px;
+        }
+        .stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .test-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Overlay Highlighting Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Configuration</h2>
+            <div class="controls">
+                <label>Highlight Mode:</label>
+                <select id="highlightMode">
+                    <option value="line">Line (Recommended)</option>
+                    <option value="block">Block</option>
+                    <option value="word">Word</option>
+                </select>
+                
+                <label>Min Confidence:</label>
+                <input type="range" id="confidenceSlider" min="0" max="100" value="70">
+                <span id="confidenceValue">70%</span>
+                
+                <label>Min Area:</label>
+                <input type="range" id="areaSlider" min="10" max="500" value="100">
+                <span id="areaValue">100px²</span>
+            </div>
+            
+            <div class="stats" id="stats">
+                <strong>Statistics:</strong>
+                <div id="statsContent">Load an image to see statistics</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Images</h2>
+            <button onclick="loadTestImage('simple')">Load Simple Text</button>
+            <button onclick="loadTestImage('complex')">Load Complex Text</button>
+            <button onclick="loadTestImage('noisy')">Load Noisy Image</button>
+            <button onclick="loadRealImage()">Load Real Image</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Text Overlay Preview</h2>
+            <div id="textOverlayContainer"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Raw Text Data</h2>
+            <pre id="rawData" style="background: #f8f9fa; padding: 10px; overflow-x: auto; max-height: 300px;"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock text data for testing
+        const mockTextData = {
+            blocks: [
+                {
+                    text: "This is a sample text block for testing the overlay system.",
+                    confidence: 95,
+                    bbox: { x0: 50, y0: 50, x1: 400, y1: 100 },
+                    lines: [
+                        {
+                            text: "This is a sample text block",
+                            confidence: 98,
+                            bbox: { x0: 50, y0: 50, x1: 350, y1: 75 },
+                            words: [
+                                { text: "This", confidence: 99, bbox: { x0: 50, y0: 50, x1: 80, y1: 75 } },
+                                { text: "is", confidence: 98, bbox: { x0: 85, y0: 50, x1: 100, y1: 75 } },
+                                { text: "a", confidence: 97, bbox: { x0: 105, y0: 50, x1: 115, y1: 75 } },
+                                { text: "sample", confidence: 96, bbox: { x0: 120, y0: 50, x1: 170, y1: 75 } },
+                                { text: "text", confidence: 95, bbox: { x0: 175, y0: 50, x1: 205, y1: 75 } },
+                                { text: "block", confidence: 94, bbox: { x0: 210, y0: 50, x1: 250, y1: 75 } }
+                            ]
+                        },
+                        {
+                            text: "for testing the overlay system.",
+                            confidence: 93,
+                            bbox: { x0: 50, y0: 80, x1: 300, y1: 100 },
+                            words: [
+                                { text: "for", confidence: 95, bbox: { x0: 50, y0: 80, x1: 70, y1: 100 } },
+                                { text: "testing", confidence: 94, bbox: { x0: 75, y0: 80, x1: 130, y1: 100 } },
+                                { text: "the", confidence: 93, bbox: { x0: 135, y0: 80, x1: 160, y1: 100 } },
+                                { text: "overlay", confidence: 92, bbox: { x0: 165, y0: 80, x1: 220, y1: 100 } },
+                                { text: "system.", confidence: 91, bbox: { x0: 225, y0: 80, x1: 280, y1: 100 } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    text: "Another block with lower confidence.",
+                    confidence: 65,
+                    bbox: { x0: 50, y0: 120, x1: 300, y1: 140 },
+                    lines: [
+                        {
+                            text: "Another block with lower confidence.",
+                            confidence: 65,
+                            bbox: { x0: 50, y0: 120, x1: 300, y1: 140 },
+                            words: [
+                                { text: "Another", confidence: 68, bbox: { x0: 50, y0: 120, x1: 110, y1: 140 } },
+                                { text: "block", confidence: 66, bbox: { x0: 115, y0: 120, x1: 155, y1: 140 } },
+                                { text: "with", confidence: 64, bbox: { x0: 160, y0: 120, x1: 190, y1: 140 } },
+                                { text: "lower", confidence: 62, bbox: { x0: 195, y0: 120, x1: 235, y1: 140 } },
+                                { text: "confidence.", confidence: 60, bbox: { x0: 240, y0: 120, x1: 300, y1: 140 } }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // Create a simple canvas-based text overlay
+        function createTextOverlay(textData, highlightMode = 'line', noiseThreshold = 70, minArea = 100) {
+            const container = document.getElementById('textOverlayContainer');
+            container.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            canvas.style.border = '1px solid #ccc';
+            container.appendChild(canvas);
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Draw background
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw mock image
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(50, 50, 400, 100);
+            ctx.strokeStyle = '#ccc';
+            ctx.strokeRect(50, 50, 400, 100);
+            
+            // Filter and draw overlays
+            const blocks = textData.blocks.filter(block => 
+                block.confidence >= noiseThreshold && 
+                (block.bbox.x1 - block.bbox.x0) * (block.bbox.y1 - block.bbox.y0) >= minArea
+            );
+            
+            blocks.forEach((block, blockIndex) => {
+                if (highlightMode === 'block') {
+                    drawBlockOverlay(ctx, block);
+                } else if (highlightMode === 'line') {
+                    block.lines.forEach(line => {
+                        if (line.confidence >= noiseThreshold) {
+                            drawLineOverlay(ctx, line);
+                        }
+                    });
+                } else if (highlightMode === 'word') {
+                    block.lines.forEach(line => {
+                        line.words.forEach(word => {
+                            if (word.confidence >= noiseThreshold) {
+                                drawWordOverlay(ctx, word);
+                            }
+                        });
+                    });
+                }
+            });
+            
+            updateStats(blocks);
+        }
+
+        function drawBlockOverlay(ctx, block) {
+            const { x0, y0, x1, y1 } = block.bbox;
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+            ctx.strokeStyle = '#ff6600';
+            ctx.lineWidth = 2;
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Arial';
+            ctx.fillText(block.text, x0 + 5, y0 + 20);
+        }
+
+        function drawLineOverlay(ctx, line) {
+            const { x0, y0, x1, y1 } = line.bbox;
+            ctx.fillStyle = 'rgba(173, 216, 230, 0.3)';
+            ctx.strokeStyle = '#0066cc';
+            ctx.lineWidth = 1;
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.fillText(line.text, x0 + 3, y0 + 15);
+        }
+
+        function drawWordOverlay(ctx, word) {
+            const { x0, y0, x1, y1 } = word.bbox;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.strokeStyle = '#0066cc';
+            ctx.lineWidth = 1;
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '11px Arial';
+            ctx.fillText(word.text, x0 + 2, y0 + 12);
+        }
+
+        function updateStats(blocks) {
+            const lines = blocks.flatMap(b => b.lines || []);
+            const words = lines.flatMap(l => l.words || []);
+            
+            const filteredBlocks = blocks.filter(b => b.confidence >= 70);
+            const filteredLines = lines.filter(l => l.confidence >= 70);
+            const filteredWords = words.filter(w => w.confidence >= 70);
+            
+            document.getElementById('statsContent').innerHTML = `
+                <div>Total Blocks: ${blocks.length}</div>
+                <div>Filtered Blocks: ${filteredBlocks.length}</div>
+                <div>Total Lines: ${lines.length}</div>
+                <div>Filtered Lines: ${filteredLines.length}</div>
+                <div>Total Words: ${words.length}</div>
+                <div>Filtered Words: ${filteredWords.length}</div>
+            `;
+        }
+
+        function loadTestImage(type) {
+            let testData = { ...mockTextData };
+            
+            if (type === 'complex') {
+                // Add more complex text data
+                testData.blocks.push({
+                    text: "Complex text with multiple lines and varying confidence levels.",
+                    confidence: 85,
+                    bbox: { x0: 50, y0: 150, x1: 450, y1: 200 },
+                    lines: [
+                        { text: "Complex text with multiple lines", confidence: 87, bbox: { x0: 50, y0: 150, x1: 350, y1: 170 }, words: [] },
+                        { text: "and varying confidence levels.", confidence: 83, bbox: { x0: 50, y0: 175, x1: 320, y1: 195 }, words: [] }
+                    ]
+                });
+            } else if (type === 'noisy') {
+                // Add low-confidence noise
+                testData.blocks.push({
+                    text: "Noisy artifact",
+                    confidence: 30,
+                    bbox: { x0: 10, y0: 10, x1: 30, y1: 25 },
+                    lines: [{ text: "Noisy", confidence: 25, bbox: { x0: 10, y0: 10, x1: 30, y1: 25 }, words: [] }]
+                });
+            }
+            
+            createTextOverlay(testData);
+            document.getElementById('rawData').textContent = JSON.stringify(testData, null, 2);
+        }
+
+        function loadRealImage() {
+            // In a real app, this would load an actual image and run OCR
+            alert('In the real app, this would load an image and run Tesseract OCR');
+            createTextOverlay(mockTextData);
+        }
+
+        // Event listeners
+        document.getElementById('highlightMode').addEventListener('change', (e) => {
+            createTextOverlay(mockTextData, e.target.value);
+        });
+
+        document.getElementById('confidenceSlider').addEventListener('input', (e) => {
+            document.getElementById('confidenceValue').textContent = e.target.value + '%';
+            createTextOverlay(mockTextData, 
+                document.getElementById('highlightMode').value,
+                Number(e.target.value)
+            );
+        });
+
+        document.getElementById('areaSlider').addEventListener('input', (e) => {
+            document.getElementById('areaValue').textContent = e.target.value + 'px²';
+            createTextOverlay(mockTextData, 
+                document.getElementById('highlightMode').value,
+                Number(document.getElementById('confidenceSlider').value),
+                Number(e.target.value)
+            );
+        });
+
+        // Initialize
+        createTextOverlay(mockTextData);
+        document.getElementById('rawData').textContent = JSON.stringify(mockTextData, null, 2);
+    </script>
+</body>
+</html>

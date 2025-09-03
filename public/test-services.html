@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        #output { margin: 20px 0; padding: 10px; background: #f0f0f0; }
+        canvas { border: 1px solid #000; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>AI Services Test</h1>
+    
+    <div class="test-section">
+        <h2>Upload Test Image</h2>
+        <input type="file" id="fileInput" accept="image/*">
+        <canvas id="originalCanvas"></canvas>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Services</h2>
+        <button onclick="testBackgroundRemoval()">Test Background Removal</button>
+        <button onclick="testTextExtraction()">Test Text Extraction</button>
+        <button onclick="testSegmentation()">Test Segmentation</button>
+    </div>
+    
+    <div id="output"></div>
+    <canvas id="resultCanvas"></canvas>
+
+    <script type="module">
+        import { u2NetService } from '../src/services/U2NetService.js';
+        import { tesseractService } from '../src/services/TesseractService.js';
+        import { samService } from '../src/services/SAMService.js';
+
+        let currentImageData = null;
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.getElementById('originalCanvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        currentImageData = ctx.getImageData(0, 0, img.width, img.height);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function log(message) {
+            document.getElementById('output').innerHTML += `<p>${message}</p>`;
+        }
+
+        window.testBackgroundRemoval = async () => {
+            if (!currentImageData) {
+                alert('Please upload an image first');
+                return;
+            }
+            
+            log('Testing background removal...');
+            try {
+                const result = await u2NetService.removeBackground(currentImageData);
+                displayResult(result.imageData, 'Background removal completed');
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        };
+
+        window.testTextExtraction = async () => {
+            if (!currentImageData) {
+                alert('Please upload an image first');
+                return;
+            }
+            
+            log('Testing text extraction...');
+            try {
+                const result = await tesseractService.extractText(currentImageData);
+                log(`Extracted text: ${result.text}`);
+                displayResult(result.imageData, 'Text extraction completed');
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        };
+
+        window.testSegmentation = async () => {
+            if (!currentImageData) {
+                alert('Please upload an image first');
+                return;
+            }
+            
+            log('Testing segmentation...');
+            try {
+                const result = await samService.segmentObject(currentImageData, { x: 50, y: 50 });
+                displayResult(result.imageData, 'Segmentation completed');
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        };
+
+        function displayResult(imageData, message) {
+            const canvas = document.getElementById('resultCanvas');
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(imageData, 0, 0);
+            log(message);
+        }
+    </script>
+</body>
+</html>

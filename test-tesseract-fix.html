@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tesseract Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-area { margin: 20px 0; }
+        canvas { border: 1px solid #ccc; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        #output { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Tesseract.js Fix Test</h1>
+    
+    <div class="test-area">
+        <h2>Test 1: Simple Text Recognition</h2>
+        <canvas id="testCanvas" width="400" height="200"></canvas>
+        <br>
+        <button onclick="runSimpleTest()">Test Text Recognition</button>
+        <button onclick="runDebugTest()">Run Debug Test</button>
+    </div>
+    
+    <div id="output">Click a button to test...</div>
+
+    <script type="module">
+        import { tesseractService, debugGrabText } from './src/services/TesseractService.js';
+        
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('output');
+        
+        // Create test image with text
+        function createTestImage() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'black';
+            ctx.font = '24px Arial';
+            ctx.fillText('Hello World', 50, 100);
+            ctx.fillText('Test 123 ABC', 50, 130);
+            
+            return ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
+        
+        window.runSimpleTest = async function() {
+            output.textContent = 'Testing...';
+            try {
+                const imageData = createTestImage();
+                console.log('Starting Tesseract test...');
+                
+                const result = await tesseractService.extractText(imageData);
+                
+                output.textContent = `✅ Test Successful!\n\nExtracted Text: ${result.text}\nConfidence: ${result.metadata.confidence}%\nProcessing Time: ${result.metadata.processingTimeMs}ms\nWords: ${result.metadata.words}`;
+                
+            } catch (error) {
+                output.textContent = `❌ Test Failed: ${error.message}`;
+                console.error('Test failed:', error);
+            }
+        };
+        
+        window.runDebugTest = async function() {
+            output.textContent = 'Running debug test...';
+            try {
+                await debugGrabText();
+                output.textContent = '✅ Debug test completed - check console for details';
+            } catch (error) {
+                output.textContent = `❌ Debug test failed: ${error.message}`;
+            }
+        };
+        
+        // Initialize on load
+        createTestImage();
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Image</title>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="300"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Draw background
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, 400, 300);
+        
+        // Draw some shapes to test erasing
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(50, 50, 100, 100);
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.beginPath();
+        ctx.arc(250, 100, 50, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#0000ff';
+        ctx.fillRect(150, 180, 80, 80);
+        
+        // Add some text
+        ctx.fillStyle = '#000000';
+        ctx.font = '24px Arial';
+        ctx.fillText('Test Image', 150, 250);
+        
+        // Convert to image and download
+        canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'test-image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>

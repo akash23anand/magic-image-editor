@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Eraser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .test-area {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .test-results {
+            margin-top: 20px;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Magic Eraser Tool Test</h1>
+        
+        <div class="test-area">
+            <h2>Test Overview</h2>
+            <p>This test verifies that the magic eraser tool workflow is working correctly:</p>
+            <ol>
+                <li>User clicks Magic Eraser button</li>
+                <li>Mask drawing overlay appears</li>
+                <li>User can draw mask with adjustable brush</li>
+                <li>User clicks Apply to process erasure</li>
+                <li>Mask is passed to UnifiedAIService</li>
+            </ol>
+        </div>
+        
+        <div class="test-area">
+            <h2>Manual Test Steps</h2>
+            <div class="status info" id="status">Ready to test...</div>
+            
+            <div style="margin: 20px 0;">
+                <h3>Step 1: Upload an Image</h3>
+                <p>Upload any image to the editor</p>
+                
+                <h3>Step 2: Click Magic Eraser Tool</h3>
+                <p>Click the 🧽 (Magic Eraser) button in the toolbar</p>
+                
+                <h3>Step 3: Verify Mask Drawing Overlay</h3>
+                <p>You should see:</p>
+                <ul>
+                    <li>A semi-transparent overlay</li>
+                    <li>Controls for brush size</li>
+                    <li>Apply/Clear/Cancel buttons</li>
+                    <li>Instructions to paint over areas to erase</li>
+                </ul>
+                
+                <h3>Step 4: Draw a Mask</h3>
+                <p>Use the brush to paint over areas you want to erase (appears in red)</p>
+                
+                <h3>Step 5: Apply the Eraser</h3>
+                <p>Click "Apply Eraser" button and verify the tool processes without errors</p>
+            </div>
+        </div>
+        
+        <div class="test-area">
+            <h2>Expected Console Output</h2>
+            <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">
+Processing with magic-eraser...
+[UnifiedAIService] processImage_start: {"tool":"magic-eraser","options":{"mask":{...}}}
+[UnifiedAIService] using_model: {"tool":"magic-eraser","model":"blur"}
+// If using fallback:
+[UnifiedAIService] using_fallback_eraser: {"tool":"magic-eraser","model":"blur"}
+// Result:
+Completed magic-eraser: {model: 'Fallback Magic Eraser', note: 'Stable Diffusion API unavailable - using blur effect'}
+            </pre>
+        </div>
+        
+        <div class="test-area">
+            <h2>Test Results</h2>
+            <div class="test-results" id="testResults">
+                <div class="test-result test-info">Run the manual test steps above and verify each step works correctly</div>
+            </div>
+        </div>
+        
+        <div class="test-area">
+            <h2>Common Issues</h2>
+            <ul>
+                <li><strong>Error: "Mask required for magic eraser"</strong> - This should no longer occur with the fix</li>
+                <li><strong>Overlay doesn't appear</strong> - Check browser console for errors</li>
+                <li><strong>Can't draw on overlay</strong> - Ensure Fabric.js is loaded correctly</li>
+                <li><strong>Mask not applied correctly</strong> - Check mask conversion in MaskDrawingOverlay</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to update status
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        // Log test information
+        console.log('Magic Eraser Test Page Loaded');
+        console.log('Follow the manual test steps to verify the magic eraser functionality');
+        
+        // You can add automated tests here if needed
+        updateStatus('Test page loaded. Follow the manual test steps above.', 'success');
+    </script>
+</body>
+</html>

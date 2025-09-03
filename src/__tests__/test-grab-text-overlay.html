@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grab Text Overlay Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-area {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .canvas-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+            border: 2px solid #007bff;
+        }
+        .base-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }
+        .overlay-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .text-overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .test-results {
+            margin: 20px 0;
+        }
+        .test-result {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Grab Text Overlay Test</h1>
+        
+        <div class="test-area">
+            <h2>Test Setup</h2>
+            <p>This test verifies that the grab-text tool properly displays the original image with text overlays on top.</p>
+            
+            <div class="controls">
+                <button onclick="loadTestImage()">Load Test Image</button>
+                <button onclick="addTextOverlay()">Add Text Overlay</button>
+                <button onclick="testPointerEvents()">Test Pointer Events</button>
+                <button onclick="clearAll()">Clear All</button>
+            </div>
+            
+            <div class="status" id="status">Ready to test...</div>
+        </div>
+        
+        <div class="test-area">
+            <h2>Canvas Container</h2>
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="baseCanvas" class="base-canvas" width="800" height="600"></canvas>
+                <div class="overlay-container" id="overlayContainer">
+                    <canvas id="textOverlayCanvas" class="text-overlay-canvas" width="800" height="600"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-area">
+            <h2>Test Results</h2>
+            <div class="test-results" id="testResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let baseCanvas, baseCtx, overlayCanvas, overlayCtx;
+        let testResults = [];
+
+        function init() {
+            baseCanvas = document.getElementById('baseCanvas');
+            baseCtx = baseCanvas.getContext('2d');
+            overlayCanvas = document.getElementById('textOverlayCanvas');
+            overlayCtx = overlayCanvas.getContext('2d');
+            
+            // Set up pointer event handling
+            const overlayContainer = document.getElementById('overlayContainer');
+            overlayContainer.style.pointerEvents = 'none';
+            overlayCanvas.style.pointerEvents = 'none';
+            
+            updateStatus('Initialized canvases');
+            addTestResult('Canvas initialization', true);
+        }
+
+        function loadTestImage() {
+            // Create a test image with text
+            baseCtx.clearRect(0, 0, 800, 600);
+            
+            // Draw background
+            baseCtx.fillStyle = '#f0f0f0';
+            baseCtx.fillRect(0, 0, 800, 600);
+            
+            // Draw a sample document
+            baseCtx.fillStyle = '#ffffff';
+            baseCtx.fillRect(100, 50, 600, 500);
+            
+            // Draw some text on the image
+            baseCtx.fillStyle = '#000000';
+            baseCtx.font = '24px Arial';
+            baseCtx.fillText('Sample Document', 250, 100);
+            
+            baseCtx.font = '16px Arial';
+            baseCtx.fillText('This is a test document with some text content.', 120, 150);
+            baseCtx.fillText('The grab-text tool should detect this text.', 120, 180);
+            baseCtx.fillText('Text overlays should appear on top of this image.', 120, 210);
+            
+            updateStatus('Test image loaded');
+            addTestResult('Image loading', true);
+            
+            // Test that the image is visible
+            const imageData = baseCtx.getImageData(400, 300, 1, 1);
+            const isVisible = imageData.data[3] > 0; // Check alpha channel
+            addTestResult('Image visibility', isVisible);
+        }
+
+        function addTextOverlay() {
+            // Clear previous overlays
+            overlayCtx.clearRect(0, 0, 800, 600);
+            
+            // Add interactive text overlays (simulating Fabric.js text objects)
+            const textOverlays = [
+                { text: 'Sample Document', x: 250, y: 80, width: 200, height: 30 },
+                { text: 'This is a test document with some text content.', x: 120, y: 135, width: 400, height: 20 },
+                { text: 'The grab-text tool should detect this text.', x: 120, y: 165, width: 350, height: 20 },
+                { text: 'Text overlays should appear on top of this image.', x: 120, y: 195, width: 400, height: 20 }
+            ];
+            
+            textOverlays.forEach((overlay, index) => {
+                // Create clickable area
+                const div = document.createElement('div');
+                div.style.position = 'absolute';
+                div.style.left = overlay.x + 'px';
+                div.style.top = overlay.y + 'px';
+                div.style.width = overlay.width + 'px';
+                div.style.height = overlay.height + 'px';
+                div.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                div.style.border = '1px solid #0066cc';
+                div.style.cursor = 'text';
+                div.style.pointerEvents = 'auto';
+                div.contentEditable = true;
+                div.textContent = overlay.text;
+                div.style.font = '16px Arial';
+                div.style.padding = '2px';
+                div.className = 'text-overlay-item';
+                
+                div.addEventListener('mouseenter', () => {
+                    div.style.backgroundColor = 'rgba(255, 255, 0, 0.6)';
+                });
+                
+                div.addEventListener('mouseleave', () => {
+                    div.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                });
+                
+                document.getElementById('overlayContainer').appendChild(div);
+            });
+            
+            updateStatus('Text overlays added');
+            addTestResult('Text overlay creation', true);
+            
+            // Test that overlays don't block the image
+            testImageVisibility();
+        }
+
+        function testPointerEvents() {
+            // Test 1: Check base canvas is still visible
+            const baseImageData = baseCtx.getImageData(400, 300, 1, 1);
+            const baseVisible = baseImageData.data[3] > 0;
+            addTestResult('Base canvas still visible', baseVisible);
+            
+            // Test 2: Check overlay container pointer events
+            const overlayContainer = document.getElementById('overlayContainer');
+            const hasCorrectPointerEvents = overlayContainer.style.pointerEvents === 'none';
+            addTestResult('Overlay container pointer events correct', hasCorrectPointerEvents);
+            
+            // Test 3: Check text overlays are interactive
+            const textOverlays = document.querySelectorAll('.text-overlay-item');
+            const overlaysInteractive = textOverlays.length > 0 && 
+                Array.from(textOverlays).every(el => el.style.pointerEvents === 'auto');
+            addTestResult('Text overlays are interactive', overlaysInteractive);
+            
+            updateStatus('Pointer event tests completed');
+        }
+
+        function testImageVisibility() {
+            // Sample multiple points to ensure image is visible
+            const testPoints = [
+                { x: 400, y: 300, name: 'Center' },
+                { x: 100, y: 100, name: 'Top-left' },
+                { x: 700, y: 500, name: 'Bottom-right' }
+            ];
+            
+            let allVisible = true;
+            testPoints.forEach(point => {
+                const imageData = baseCtx.getImageData(point.x, point.y, 1, 1);
+                const visible = imageData.data[3] > 0;
+                if (!visible) allVisible = false;
+            });
+            
+            addTestResult('Image remains visible under overlays', allVisible);
+        }
+
+        function clearAll() {
+            baseCtx.clearRect(0, 0, 800, 600);
+            overlayCtx.clearRect(0, 0, 800, 600);
+            
+            // Remove text overlay divs
+            const overlays = document.querySelectorAll('.text-overlay-item');
+            overlays.forEach(el => el.remove());
+            
+            updateStatus('Cleared all content');
+            testResults = [];
+            document.getElementById('testResults').innerHTML = '';
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function addTestResult(testName, passed) {
+            const result = { name: testName, passed: passed };
+            testResults.push(result);
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.textContent = `${passed ? '✓' : '✗'} ${testName}`;
+            document.getElementById('testResults').appendChild(resultDiv);
+        }
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>

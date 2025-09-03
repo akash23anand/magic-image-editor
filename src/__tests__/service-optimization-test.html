@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Optimization Test Suite</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Service Optimization Test Suite</h1>
+        
+        <div class="test-section">
+            <h3>Background Removal Service (U2Net)</h3>
+            <div class="controls">
+                <label>Sensitivity:</label>
+                <input type="range" id="bgSensitivity" min="0" max="100" value="70">
+                <span id="bgSensitivityValue">70%</span>
+            </div>
+            <button onclick="testBackgroundRemoval()">Test Background Removal</button>
+            <div id="bgResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Stable Diffusion Service</h3>
+            <div class="controls">
+                <label>Quality:</label>
+                <select id="sdQuality">
+                    <option value="fast">Fast</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <button onclick="testStableDiffusion()">Test Background Generation</button>
+            <div id="sdResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>SAM Service (Magic Grab)</h3>
+            <div class="controls">
+                <label>Sensitivity:</label>
+                <input type="range" id="samSensitivity" min="0" max="100" value="70">
+                <span id="samSensitivityValue">70%</span>
+            </div>
+            <div class="controls">
+                <label>Edge Refinement:</label>
+                <input type="checkbox" id="samEdgeRefinement" checked>
+            </div>
+            <div class="controls">
+                <label>Feather Amount:</label>
+                <input type="range" id="samFeather" min="0" max="10" value="2">
+                <span id="samFeatherValue">2px</span>
+            </div>
+            <button onclick="testSAMService()">Test Object Segmentation</button>
+            <div id="samResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Tesseract Service (Text Extraction)</h3>
+            <div class="controls">
+                <label>Quality:</label>
+                <select id="tessQuality">
+                    <option value="fast">Fast</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="accurate">Accurate</option>
+                </select>
+            </div>
+            <div class="controls">
+                <label>Preprocess:</label>
+                <input type="checkbox" id="tessPreprocess" checked>
+            </div>
+            <button onclick="testTesseractService()">Test Text Extraction</button>
+            <div id="tessResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Images</h3>
+            <div class="canvas-container">
+                <div>
+                    <h4>Original Test Image</h4>
+                    <canvas id="originalCanvas" width="300" height="200"></canvas>
+                </div>
+                <div>
+                    <h4>Processed Result</h4>
+                    <canvas id="resultCanvas" width="300" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import services
+        import { u2netService } from '../services/U2NetService.js';
+        import { stableDiffusionService } from '../services/StableDiffusionService.js';
+        import { samService } from '../services/SAMService.js';
+        import { tesseractService } from '../services/TesseractService.js';
+
+        // Create test image
+        function createTestImage() {
+            const canvas = document.getElementById('originalCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 300, 200);
+            gradient.addColorStop(0, '#ff6b6b');
+            gradient.addColorStop(1, '#4ecdc4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 300, 200);
+            
+            // Add text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('Test Image', 100, 100);
+            ctx.font = '16px Arial';
+            ctx.fillText('Service Optimization', 80, 130);
+            
+            return ctx.getImageData(0, 0, 300, 200);
+        }
+
+        // Background Removal Test
+        async function testBackgroundRemoval() {
+            const sensitivity = document.getElementById('bgSensitivity').value / 100;
+            const resultsDiv = document.getElementById('bgResults');
+            
+            try {
+                resultsDiv.innerHTML = '<div class="info">Testing background removal...</div>';
+                
+                const imageData = createTestImage();
+                const result = await u2netService.removeBackground(imageData, sensitivity);
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">✅ Background removal successful</div>
+                    <div class="info">Sensitivity: ${sensitivity}</div>
+                    <div class="info">Processing time: ${result.metadata.processingTimeMs}ms</div>
+                `;
+                
+                displayResult(result.imageData);
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Stable Diffusion Test
+        async function testStableDiffusion() {
+            const quality = document.getElementById('sdQuality').value;
+            const resultsDiv = document.getElementById('sdResults');
+            
+            try {
+                resultsDiv.innerHTML = '<div class="info">Testing background generation...</div>';
+                
+                const imageData = createTestImage();
+                const result = await stableDiffusionService.generateBackground(
+                    imageData, 
+                    'professional studio background', 
+                    { quality }
+                );
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">✅ Background generation successful</div>
+                    <div class="info">Quality: ${quality}</div>
+                    <div class="info">Processing time: ${result.metadata.processingTimeMs}ms</div>
+                `;
+                
+                displayResult(result.imageData);
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // SAM Service Test
+        async function testSAMService() {
+            const sensitivity = document.getElementById('samSensitivity').value / 100;
+            const edgeRefinement = document.getElementById('samEdgeRefinement').checked;
+            const featherAmount = parseInt(document.getElementById('samFeather').value);
+            const resultsDiv = document.getElementById('samResults');
+            
+            try {
+                resultsDiv.innerHTML = '<div class="info">Testing object segmentation...</div>';
+                
+                const imageData = createTestImage();
+                const result = await samService.segmentObject(
+                    imageData, 
+                    { x: 150, y: 100, width: 100, height: 50 },
+                    { sensitivity, edgeRefinement, featherAmount }
+                );
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">✅ Object segmentation successful</div>
+                    <div class="info">Sensitivity: ${sensitivity}</div>
+                    <div class="info">Edge Refinement: ${edgeRefinement}</div>
+                    <div class="info">Feather Amount: ${featherAmount}px</div>
+                `;
+                
+                displayResult(result.imageData);
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Tesseract Service Test
+        async function testTesseractService() {
+            const quality = document.getElementById('tessQuality').value;
+            const preprocess = document.getElementById('tessPreprocess').checked;
+            const resultsDiv = document.getElementById('tessResults');
+            
+            try {
+                resultsDiv.innerHTML = '<div class="info">Testing text extraction...</div>';
+                
+                // Create text image
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, 300, 200);
+                ctx.fillStyle = 'black';
+                ctx.font = '24px Arial';
+                ctx.fillText('Hello World', 50, 100);
+                ctx.fillText('Test 123', 50, 130);
+                
+                const imageData = ctx.getImageData(0, 0, 300, 200);
+                const result = await tesseractService.extractText(imageData, { quality, preprocess });
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">✅ Text extraction successful</div>
+                    <div class="info">Quality: ${quality}</div>
+                    <div class="info">Preprocess: ${preprocess}</div>
+                    <div class="info">Confidence: ${result.metadata.confidence}%</div>
+                    <div class="info">Text: "${result.text}"</div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Display result
+        function displayResult(imageData) {
+            const canvas = document.getElementById('resultCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Update slider values
+        document.getElementById('bgSensitivity').addEventListener('input', (e) => {
+            document.getElementById('bgSensitivityValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('samSensitivity').addEventListener('input', (e) => {
+            document.getElementById('samSensitivityValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('samFeather').addEventListener('input', (e) => {
+            document.getElementById('samFeatherValue').textContent = e.target.value + 'px';
+        });
+
+        // Initialize test image
+        createTestImage();
+
+        // Make functions global
+        window.testBackgroundRemoval = testBackgroundRemoval;
+        window.testStableDiffusion = testStableDiffusion;
+        window.testSAMService = testSAMService;
+        window.testTesseractService = testTesseractService;
+    </script>
+</body>
+</html>

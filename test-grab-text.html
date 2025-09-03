@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Grab Text</title>
+</head>
+<body>
+    <h1>Test Grab Text Functionality</h1>
+    
+    <div>
+        <h2>Test Image</h2>
+        <canvas id="testCanvas" width="400" height="200" style="border: 1px solid black;"></canvas>
+    </div>
+    
+    <div>
+        <button onclick="testGrabText()">Test Grab Text</button>
+    </div>
+    
+    <div id="results">
+        <h3>Results:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script type="module">
+        // Import the Tesseract service
+        import { tesseractService } from './src/services/TesseractService.js';
+        
+        // Create test image
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // White background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Black text
+        ctx.fillStyle = 'black';
+        ctx.font = '24px Arial';
+        ctx.fillText('Hello World', 50, 100);
+        ctx.fillText('Test Text 123', 50, 130);
+        
+        window.testGrabText = async function() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing grab-text...\n';
+            
+            try {
+                // Get image data
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                output.textContent += `Image dimensions: ${imageData.width}x${imageData.height}\n`;
+                output.textContent += 'Starting OCR...\n';
+                
+                // Test Tesseract
+                const result = await tesseractService.extractText(imageData);
+                
+                output.textContent += '\n=== Results ===\n';
+                output.textContent += `Extracted text: "${result.text}"\n`;
+                output.textContent += `Confidence: ${result.metadata.confidence}%\n`;
+                output.textContent += `Processing time: ${result.metadata.processingTimeMs}ms\n`;
+                output.textContent += `Words found: ${result.metadata.words}\n`;
+                
+            } catch (error) {
+                output.textContent += `\nError: ${error.message}\n`;
+                console.error('Test failed:', error);
+            }
+        };
+        
+        // Also test with debug function
+        window.debugGrabText = async function() {
+            const output = document.getElementById('output');
+            output.textContent = 'Running debug test...\n';
+            
+            try {
+                const { debugGrabText } = await import('./src/services/TesseractService.js');
+                await debugGrabText();
+                output.textContent += 'Debug test completed. Check console for full results.';
+            } catch (error) {
+                output.textContent += `Debug test failed: ${error.message}`;
+            }
+        };
+    </script>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="debugGrabText()">Run Debug Test</button>
+    </div>
+</body>
+</html>

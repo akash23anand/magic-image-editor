@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>U²-Net Inversion Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        .value-display {
+            display: inline-block;
+            width: 50px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>U²-Net Inversion Fix Test</h1>
+    
+    <div class="controls">
+        <h3>Test Controls</h3>
+        <div class="slider-container">
+            <label>Sensitivity:</label>
+            <input type="range" id="sensitivity" min="0" max="1" step="0.1" value="0.5">
+            <span class="value-display" id="sensitivityValue">0.5</span>
+        </div>
+        <div class="slider-container">
+            <label>Edge Feather:</label>
+            <input type="range" id="edgeFeather" min="0" max="10" step="1" value="2">
+            <span class="value-display" id="edgeFeatherValue">2</span>
+        </div>
+        <div class="slider-container">
+            <label>Preserve Edges:</label>
+            <input type="checkbox" id="preserveEdges" checked>
+        </div>
+        <button onclick="testInversion()">Run Inversion Test</button>
+        <button onclick="clearDebug()">Clear Debug</button>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h3>Original Image</h3>
+            <canvas id="originalCanvas"></canvas>
+            <input type="file" id="fileInput" accept="image/*" onchange="loadImage(event)">
+        </div>
+        
+        <div class="test-section">
+            <h3>Processed Result</h3>
+            <canvas id="resultCanvas"></canvas>
+            <div class="debug-info" id="debugInfo"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="test-section">
+            <h3>Mask Visualization</h3>
+            <canvas id="maskCanvas"></canvas>
+            <p>White = Foreground, Black = Background</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>Histogram</h3>
+            <canvas id="histogramCanvas"></canvas>
+            <p>Alpha value distribution</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { u2NetService } from '../services/U2NetService.js';
+
+        let currentImageData = null;
+
+        // Update slider values
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            document.getElementById('sensitivityValue').textContent = e.target.value;
+            if (currentImageData) processImage();
+        });
+
+        document.getElementById('edgeFeather').addEventListener('input', (e) => {
+            document.getElementById('edgeFeatherValue').textContent = e.target.value;
+            if (currentImageData) processImage();
+        });
+
+        document.getElementById('preserveEdges').addEventListener('change', () => {
+            if (currentImageData) processImage();
+        });
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('originalCanvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                processImage();
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        async function processImage() {
+            if (!currentImageData) return;
+
+            const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+            const edgeFeather = parseInt(document.getElementById('edgeFeather').value);
+            const preserveEdges = document.getElementById('preserveEdges').checked;
+
+            try {
+                console.log('Starting background removal...');
+                const result = await u2NetService.removeBackground(currentImageData, {
+                    sensitivity,
+                    edgeFeather,
+                    preserveEdges
+                });
+
+                // Display result
+                const resultCanvas = document.getElementById('resultCanvas');
+                resultCanvas.width = result.imageData.width;
+                resultCanvas.height = result.imageData.height;
+                const resultCtx = resultCanvas.getContext('2d');
+                resultCtx.putImageData(result.imageData, 0, 0);
+
+                // Create and display mask
+                displayMask(result.imageData);
+                
+                // Display histogram
+                displayHistogram(result.imageData);
+
+            } catch (error) {
+                console.error('Error processing image:', error);
+                addDebugInfo(`Error: ${error.message}`);
+            }
+        }
+
+        function displayMask(imageData) {
+            const maskCanvas = document.getElementById('maskCanvas');
+            maskCanvas.width = imageData.width;
+            maskCanvas.height = imageData.height;
+            const maskCtx = maskCanvas.getContext('2d');
+            
+            const maskData = new ImageData(imageData.width, imageData.height);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const alpha = imageData.data[i + 3];
+                maskData.data[i] = alpha;     // R
+                maskData.data[i + 1] = alpha; // G
+                maskData.data[i + 2] = alpha; // B
+                maskData.data[i + 3] = 255;   // A
+            }
+            maskCtx.putImageData(maskData, 0, 0);
+        }
+
+        function displayHistogram(imageData) {
+            const histCanvas = document.getElementById('histogramCanvas');
+            const width = 256;
+            const height = 100;
+            histCanvas.width = width;
+            histCanvas.height = height;
+            const ctx = histCanvas.getContext('2d');
+            
+            // Calculate histogram
+            const histogram = new Array(256).fill(0);
+            for (let i = 3; i < imageData.data.length; i += 4) {
+                const alpha = imageData.data[i];
+                histogram[alpha]++;
+            }
+            
+            // Find max for scaling
+            const maxCount = Math.max(...histogram);
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw histogram
+            ctx.fillStyle = '#007bff';
+            for (let i = 0; i < 256; i++) {
+                const barHeight = (histogram[i] / maxCount) * height;
+                ctx.fillRect(i, height - barHeight, 1, barHeight);
+            }
+            
+            // Draw labels
+            ctx.fillStyle = '#000';
+            ctx.font = '10px Arial';
+            ctx.fillText('0', 0, height - 5);
+            ctx.fillText('255', width - 15, height - 5);
+        }
+
+        function testInversion() {
+            if (!currentImageData) {
+                addDebugInfo('Please load an image first');
+                return;
+            }
+
+            addDebugInfo('=== Inversion Test Started ===');
+            
+            // Override console methods to capture debug output
+            const originalConsoleTable = console.table;
+            const originalConsoleWarn = console.warn;
+            
+            console.table = (data) => {
+                addDebugInfo('Console.table: ' + JSON.stringify(data, null, 2));
+                originalConsoleTable.call(console, data);
+            };
+            
+            console.warn = (message) => {
+                addDebugInfo('Console.warn: ' + message);
+                originalConsoleWarn.call(console, message);
+            };
+            
+            processImage().then(() => {
+                console.table = originalConsoleTable;
+                console.warn = originalConsoleWarn;
+                addDebugInfo('=== Inversion Test Complete ===');
+            });
+        }
+
+        function addDebugInfo(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        function clearDebug() {
+            document.getElementById('debugInfo').innerHTML = '';
+        }
+
+        // Load a default test image
+        window.addEventListener('load', () => {
+            // Create a simple test pattern
+            const canvas = document.getElementById('originalCanvas');
+            canvas.width = 320;
+            canvas.height = 320;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a portrait-like pattern (center subject)
+            const gradient = ctx.createRadialGradient(160, 160, 0, 160, 160, 120);
+            gradient.addColorStop(0, '#ff6b6b');
+            gradient.addColorStop(0.7, '#4ecdc4');
+            gradient.addColorStop(1, '#45b7d1');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 320, 320);
+            
+            // Add some details
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(120, 80, 80, 160);
+            ctx.fillStyle = '#e74c3c';
+            ctx.arc(160, 120, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            currentImageData = ctx.getImageData(0, 0, 320, 320);
+        });
+    </script>
+</body>
+</html>

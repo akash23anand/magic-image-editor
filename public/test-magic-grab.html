@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Grab Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-image {
+            max-width: 600px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #app-frame {
+            width: 100%;
+            height: 800px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Magic Grab Feature Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Instructions</h2>
+            <div class="instructions">
+                <ol>
+                    <li>Click "Load Test Image" to load a sample image into the editor</li>
+                    <li>Click the Magic Grab tool (👆) in the toolbar</li>
+                    <li>Click and drag on the image to select an area</li>
+                    <li>The selected area will be segmented and become draggable</li>
+                    <li>Drag the grabbed object to move it around</li>
+                    <li>Press Enter or Space to place the object</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Sample Test Images</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div>
+                    <h3>Test Image 1: Shapes</h3>
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Crect width='600' height='400' fill='%23f0f0f0'/%3E%3Ccircle cx='200' cy='200' r='80' fill='%23ff6b6b'/%3E%3Crect x='350' y='150' width='100' height='100' fill='%234ecdc4'/%3E%3Cpolygon points='150,350 250,350 200,280' fill='%23ffe66d'/%3E%3Cellipse cx='450' cy='300' rx='60' ry='40' fill='%23a8e6cf'/%3E%3Ctext x='300' y='50' font-family='Arial' font-size='24' text-anchor='middle' fill='%23333'%3ETest Objects for Magic Grab%3C/text%3E%3C/svg%3E"
+                         alt="Test image with shapes"
+                         class="test-image"
+                         id="testImage1"
+                         style="cursor: pointer; border: 2px solid transparent;"
+                         onclick="selectTestImage(this)">
+                    <p>SVG with geometric shapes</p>
+                </div>
+                <div>
+                    <h3>Test Image 2: Photo</h3>
+                    <img src="https://picsum.photos/600/400"
+                         alt="Random photo"
+                         class="test-image"
+                         id="testImage2"
+                         style="cursor: pointer; border: 2px solid transparent;"
+                         onclick="selectTestImage(this)"
+                         crossorigin="anonymous">
+                    <p>Random photo from Lorem Picsum</p>
+                </div>
+            </div>
+            <p style="margin-top: 20px; font-style: italic;">Click on an image above to select it for testing</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Editor</h2>
+            <div style="margin-bottom: 10px;">
+                <span>Selected Image: </span>
+                <span id="selectedImageName" style="font-weight: bold;">None</span>
+            </div>
+            <button onclick="loadTestImage()" id="loadButton" disabled>Load Selected Image</button>
+            <button onclick="clearEditor()">Clear Editor</button>
+            <iframe id="app-frame" src="http://localhost:3000"></iframe>
+        </div>
+    </div>
+
+    <script>
+        let selectedImage = null;
+
+        function selectTestImage(img) {
+            // Remove previous selection
+            document.querySelectorAll('.test-image').forEach(i => {
+                i.style.border = '2px solid transparent';
+            });
+            
+            // Highlight selected image
+            img.style.border = '2px solid #007bff';
+            selectedImage = img;
+            
+            // Update UI
+            document.getElementById('selectedImageName').textContent = img.alt;
+            document.getElementById('loadButton').disabled = false;
+        }
+
+        function loadTestImage() {
+            if (!selectedImage) {
+                alert('Please select an image first');
+                return;
+            }
+
+            alert('To load the image into the editor:\n\n1. Click the Upload button (📁) in the editor toolbar\n2. Select any image file from your computer\n\nOnce an image is loaded:\n1. Click the Magic Grab tool (👆)\n2. Click and drag to select an area\n3. The selected area will be segmented and become draggable\n4. Drag to move it around\n5. Press Enter or Space to place it\n\nNote: Due to browser security, we cannot programmatically load the test image.');
+        }
+
+        function clearEditor() {
+            const iframe = document.getElementById('app-frame');
+            iframe.src = iframe.src; // Reload the iframe
+            
+            // Reset selection
+            selectedImage = null;
+            document.getElementById('selectedImageName').textContent = 'None';
+            document.getElementById('loadButton').disabled = true;
+            document.querySelectorAll('.test-image').forEach(i => {
+                i.style.border = '2px solid transparent';
+            });
+        }
+
+        // Listen for messages from the iframe
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'editorReady') {
+                console.log('Editor is ready');
+            }
+        });
+
+        // Auto-select the first image on load
+        window.addEventListener('load', () => {
+            const firstImage = document.getElementById('testImage1');
+            if (firstImage) {
+                selectTestImage(firstImage);
+            }
+        });
+    </script>
+</body>
+</html>

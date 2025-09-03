@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E Logging Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log-section {
+            margin: 20px 0;
+        }
+        .log-output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>E2E Logging Test Page</h1>
+        
+        <div class="status info" id="status">
+            Ready to test logging functionality
+        </div>
+
+        <div class="log-section">
+            <h3>Test Actions</h3>
+            <button onclick="testImageUpload()">Test Image Upload</button>
+            <button onclick="testGrabText()">Test Grab Text</button>
+            <button onclick="testBackgroundRemover()">Test Background Remover</button>
+            <button onclick="exportLogs()">Export Logs</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="log-section">
+            <h3>Console Output</h3>
+            <div class="log-output" id="consoleOutput">Waiting for actions...</div>
+        </div>
+
+        <div class="log-section">
+            <h3>File Upload Test</h3>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)">
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the logger
+        import { e2eLogger } from '../src/utils/E2ELogger.js';
+
+        // Override console methods to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const originalDebug = console.debug;
+
+        const consoleOutput = document.getElementById('consoleOutput');
+        const status = document.getElementById('status');
+
+        function addToOutput(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.textContent += `[${timestamp}] ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        console.log = (...args) => {
+            originalLog(...args);
+            addToOutput(args.join(' '));
+        };
+
+        console.error = (...args) => {
+            originalError(...args);
+            addToOutput('ERROR: ' + args.join(' '));
+        };
+
+        console.warn = (...args) => {
+            originalWarn(...args);
+            addToOutput('WARN: ' + args.join(' '));
+        };
+
+        console.debug = (...args) => {
+            originalDebug(...args);
+            addToOutput('DEBUG: ' + args.join(' '));
+        };
+
+        // Test functions
+        window.testImageUpload = function() {
+            e2eLogger.info('Test', 'test_image_upload', {
+                testType: 'simulated',
+                timestamp: Date.now()
+            });
+            status.textContent = 'Image upload test logged';
+            status.className = 'status info';
+        };
+
+        window.testGrabText = function() {
+            e2eLogger.info('Test', 'test_grab_text', {
+                testType: 'simulated',
+                expectedText: 'Sample text extraction'
+            });
+            status.textContent = 'Grab text test logged';
+            status.className = 'status info';
+        };
+
+        window.testBackgroundRemover = function() {
+            e2eLogger.info('Test', 'test_background_remover', {
+                testType: 'simulated',
+                expectedResult: 'transparent background'
+            });
+            status.textContent = 'Background remover test logged';
+            status.className = 'status info';
+        };
+
+        window.exportLogs = function() {
+            const logs = e2eLogger.exportLogs();
+            const blob = new Blob([logs], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `e2e-logs-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            status.textContent = 'Logs exported';
+            status.className = 'status info';
+        };
+
+        window.clearLogs = function() {
+            e2eLogger.clearLogs();
+            consoleOutput.textContent = 'Logs cleared\n';
+            status.textContent = 'Logs cleared';
+            status.className = 'status info';
+        };
+
+        window.handleFileUpload = function(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                e2eLogger.info('Test', 'file_upload_test', {
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
+                status.textContent = `File uploaded: ${file.name}`;
+                status.className = 'status info';
+            }
+        };
+
+        // Initial test
+        e2eLogger.info('Test', 'logging_system_initialized', {
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString()
+        });
+
+        console.log('E2E Logging system initialized');
+        console.log('Session ID:', e2eLogger.getSessionId());
+    </script>
+</body>
+</html>

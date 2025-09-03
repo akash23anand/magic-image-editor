@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Removal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value-display {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+        .image-label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Background Removal Adjustment Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <div class="controls">
+            <div class="control-group">
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" id="sensitivity" min="0" max="1" step="0.1" value="0.5">
+                <div class="value-display">Current: <span id="sensitivity-value">0.5</span></div>
+            </div>
+            
+            <div class="control-group">
+                <label for="edgeFeather">Edge Feather</label>
+                <input type="range" id="edgeFeather" min="0" max="10" step="1" value="2">
+                <div class="value-display">Current: <span id="edgeFeather-value">2</span>px</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="preserveEdges">
+                    <input type="checkbox" id="preserveEdges" checked> Preserve Edges
+                </label>
+            </div>
+        </div>
+        
+        <button onclick="testBackgroundRemoval()">Test Background Removal</button>
+        <button onclick="resetImage()">Reset Image</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div class="canvas-container">
+            <div>
+                <div class="image-label">Original</div>
+                <canvas id="original-canvas"></canvas>
+            </div>
+            <div>
+                <div class="image-label">Background Removed</div>
+                <canvas id="result-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-results" id="test-results">
+        <h3>Test Instructions</h3>
+        <ol>
+            <li>Upload an image using the file input below</li>
+            <li>Adjust the sensitivity slider (lower = less aggressive, higher = more aggressive)</li>
+            <li>Adjust edge feathering for smoother transitions</li>
+            <li>Toggle edge preservation to prevent erosion of main subject</li>
+            <li>Click "Test Background Removal" to see results</li>
+        </ol>
+    </div>
+
+    <input type="file" id="image-upload" accept="image/*" onchange="loadImage(event)">
+
+    <script type="module">
+        import { u2NetService } from '../src/services/U2NetService.js';
+
+        let originalImageData = null;
+
+        // Update value displays
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            document.getElementById('sensitivity-value').textContent = e.target.value;
+        });
+
+        document.getElementById('edgeFeather').addEventListener('input', (e) => {
+            document.getElementById('edgeFeather-value').textContent = e.target.value;
+        });
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.getElementById('original-canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function testBackgroundRemoval() {
+            if (!originalImageData) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+            const edgeFeather = parseInt(document.getElementById('edgeFeather').value);
+            const preserveEdges = document.getElementById('preserveEdges').checked;
+
+            try {
+                const result = await u2NetService.removeBackground(originalImageData, {
+                    sensitivity,
+                    edgeFeather,
+                    preserveEdges
+                });
+
+                const resultCanvas = document.getElementById('result-canvas');
+                const resultCtx = resultCanvas.getContext('2d');
+                resultCanvas.width = result.imageData.width;
+                resultCanvas.height = result.imageData.height;
+                resultCtx.putImageData(result.imageData, 0, 0);
+
+                document.getElementById('test-results').innerHTML = `
+                    <h3>Test Results</h3>
+                    <p><strong>Sensitivity:</strong> ${sensitivity} (${sensitivity < 0.3 ? 'Conservative' : sensitivity > 0.7 ? 'Aggressive' : 'Balanced'})</p>
+                    <p><strong>Edge Feather:</strong> ${edgeFeather}px</p>
+                    <p><strong>Edge Preservation:</strong> ${preserveEdges ? 'Enabled' : 'Disabled'}</p>
+                    <p><strong>Processing Time:</strong> ${Date.now() - startTime}ms</p>
+                `;
+            } catch (error) {
+                alert('Error processing image: ' + error.message);
+            }
+        }
+
+        function resetImage() {
+            if (originalImageData) {
+                const resultCanvas = document.getElementById('result-canvas');
+                const resultCtx = resultCanvas.getContext('2d');
+                resultCanvas.width = originalImageData.width;
+                resultCanvas.height = originalImageData.height;
+                resultCtx.putImageData(originalImageData, 0, 0);
+            }
+        }
+
+        // Make functions global for onclick handlers
+        window.loadImage = loadImage;
+        window.testBackgroundRemoval = testBackgroundRemoval;
+        window.resetImage = resetImage;
+    </script>
+</body>
+</html>

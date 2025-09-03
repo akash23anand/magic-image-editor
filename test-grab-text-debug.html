@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grab Text Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .output {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            max-width: 100%;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Grab Text Debug Test</h1>
+        
+        <div class="test-section">
+            <h3>Test 1: Built-in Test Image</h3>
+            <p>Creates a simple image with text to test OCR functionality.</p>
+            <button onclick="testBuiltInImage()">Run Built-in Test</button>
+            <div id="test1-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Upload Image</h3>
+            <p>Upload your own image to test OCR.</p>
+            <input type="file" id="fileInput" accept="image/*" onchange="handleFileUpload(event)">
+            <div id="test2-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: URL Image</h3>
+            <p>Test OCR with an image from URL.</p>
+            <input type="url" id="urlInput" placeholder="Enter image URL" style="width: 300px; padding: 5px;">
+            <button onclick="testUrlImage()">Test URL Image</button>
+            <div id="test3-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Debug Console</h3>
+            <div id="debug-console" class="output"></div>
+            <button onclick="clearConsole()">Clear Console</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the Tesseract service
+        import { tesseractService } from './src/services/TesseractService.js';
+
+        function log(message, type = 'info') {
+            const console = document.getElementById('debug-console');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            console.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+            console.log(message);
+        }
+
+        window.log = log;
+
+        async function testBuiltInImage() {
+            log('Starting built-in image test...');
+            const resultDiv = document.getElementById('test1-result');
+            resultDiv.innerHTML = '<p>Creating test image...</p>';
+
+            try {
+                // Create test image
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // White background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Black text
+                ctx.fillStyle = 'black';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('Hello World', 50, 80);
+                ctx.fillText('Debug Test 123', 50, 120);
+                ctx.fillText('OCR Working!', 50, 160);
+                
+                // Display the test image
+                resultDiv.innerHTML = '<p>Test image created:</p>';
+                resultDiv.appendChild(canvas);
+                
+                // Get image data
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                log(`Test image created: ${imageData.width}x${imageData.height}`);
+                
+                // Test OCR
+                log('Starting OCR processing...');
+                const startTime = performance.now();
+                const result = await tesseractService.extractText(imageData);
+                const endTime = performance.now();
+                
+                // Display results
+                const resultsHtml = `
+                    <div class="success">
+                        <h4>OCR Results:</h4>
+                        <p><strong>Text:</strong> "${result.text}"</p>
+                        <p><strong>Confidence:</strong> ${result.metadata.confidence}%</p>
+                        <p><strong>Processing Time:</strong> ${Math.round(endTime - startTime)}ms</p>
+                        <p><strong>Blocks:</strong> ${result.metadata.blocks}</p>
+                        <p><strong>Words:</strong> ${result.metadata.words}</p>
+                    </div>
+                `;
+                resultDiv.innerHTML += resultsHtml;
+                
+                log(`✅ Built-in test complete: "${result.text}" (${result.metadata.confidence}% confidence)`, 'success');
+                
+            } catch (error) {
+                log(`❌ Built-in test failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            log(`Processing uploaded file: ${file.name} (${Math.round(file.size / 1024)}KB)`);
+            const resultDiv = document.getElementById('test2-result');
+            resultDiv.innerHTML = '<p>Processing uploaded image...</p>';
+
+            try {
+                const img = new Image();
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Display uploaded image
+                    resultDiv.innerHTML = '<p>Uploaded image:</p>';
+                    resultDiv.appendChild(canvas);
+                    
+                    // Process with OCR
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    log(`Image loaded: ${imageData.width}x${imageData.height}`);
+                    
+                    const startTime = performance.now();
+                    const result = await tesseractService.extractText(imageData);
+                    const endTime = performance.now();
+                    
+                    const resultsHtml = `
+                        <div class="success">
+                            <h4>OCR Results:</h4>
+                            <p><strong>Text:</strong> "${result.text}"</p>
+                            <p><strong>Confidence:</strong> ${result.metadata.confidence}%</p>
+                            <p><strong>Processing Time:</strong> ${Math.round(endTime - startTime)}ms</p>
+                        </div>
+                    `;
+                    resultDiv.innerHTML += resultsHtml;
+                    
+                    log(`✅ File processing complete: "${result.text.substring(0, 50)}..."`, 'success');
+                };
+                
+                img.onerror = () => {
+                    log('❌ Failed to load image file', 'error');
+                    resultDiv.innerHTML = '<div class="error">Failed to load image file</div>';
+                };
+                
+                img.src = URL.createObjectURL(file);
+                
+            } catch (error) {
+                log(`❌ File processing failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testUrlImage() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) {
+                log('❌ Please enter a valid URL', 'error');
+                return;
+            }
+
+            log(`Testing URL: ${url}`);
+            const resultDiv = document.getElementById('test3-result');
+            resultDiv.innerHTML = '<p>Loading image from URL...</p>';
+
+            try {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Display loaded image
+                    resultDiv.innerHTML = '<p>Image loaded from URL:</p>';
+                    resultDiv.appendChild(canvas);
+                    
+                    // Process with OCR
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    log(`URL image loaded: ${imageData.width}x${imageData.height}`);
+                    
+                    const startTime = performance.now();
+                    const result = await tesseractService.extractText(imageData);
+                    const endTime = performance.now();
+                    
+                    const resultsHtml = `
+                        <div class="success">
+                            <h4>OCR Results:</h4>
+                            <p><strong>Text:</strong> "${result.text}"</p>
+                            <p><strong>Confidence:</strong> ${result.metadata.confidence}%</p>
+                            <p><strong>Processing Time:</strong> ${Math.round(endTime - startTime)}ms</p>
+                        </div>
+                    `;
+                    resultDiv.innerHTML += resultsHtml;
+                    
+                    log(`✅ URL processing complete: "${result.text.substring(0, 50)}..."`, 'success');
+                };
+                
+                img.onerror = () => {
+                    log('❌ Failed to load image from URL', 'error');
+                    resultDiv.innerHTML = '<div class="error">Failed to load image from URL</div>';
+                };
+                
+                img.src = url;
+                
+            } catch (error) {
+                log(`❌ URL processing failed: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        window.clearConsole = () => {
+            document.getElementById('debug-console').textContent = '';
+        };
+
+        // Make functions available globally
+        window.testBuiltInImage = testBuiltInImage;
+        window.handleFileUpload = handleFileUpload;
+        window.testUrlImage = testUrlImage;
+
+        // Initial log
+        log('Grab Text Debug Test loaded. Ready to test OCR functionality.');
+    </script>
+</body>
+</html>

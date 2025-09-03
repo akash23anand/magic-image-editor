@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Grab Text Feature</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-area {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #testImage {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        .success {
+            color: #388e3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grab Text Feature Test</h1>
+    
+    <div class="test-area">
+        <h2>Test Image</h2>
+        <canvas id="testCanvas" width="400" height="200" style="border: 1px solid #000;"></canvas>
+        <br>
+        <button onclick="createTestImage()">Create Test Image</button>
+        <button onclick="testGrabText()" id="testButton" disabled>Test Grab Text</button>
+    </div>
+
+    <div class="test-area">
+        <h2>Results</h2>
+        <div id="result">Click "Create Test Image" first, then "Test Grab Text"</div>
+    </div>
+
+    <script type="module">
+        import { tesseractService } from '../src/services/TesseractService.js';
+
+        let testImageData = null;
+
+        function createTestImage() {
+            const canvas = document.getElementById('testCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add some text
+            ctx.fillStyle = 'black';
+            ctx.font = '24px Arial';
+            ctx.fillText('Hello World', 50, 50);
+            ctx.fillText('Testing OCR', 50, 100);
+            ctx.fillText('1234567890', 50, 150);
+            
+            // Get image data
+            testImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            document.getElementById('testButton').disabled = false;
+            document.getElementById('result').innerHTML = 'Test image created. Click "Test Grab Text" to proceed.';
+        }
+
+        async function testGrabText() {
+            if (!testImageData) {
+                document.getElementById('result').innerHTML = '<span class="error">Please create test image first</span>';
+                return;
+            }
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<span class="loading">Processing image with Tesseract.js...</span>';
+
+            try {
+                console.log('Starting OCR test...');
+                const result = await tesseractService.extractText(testImageData);
+                
+                console.log('OCR Result:', result);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ OCR Test Successful!</strong>
+                        <br><br>
+                        <strong>Extracted Text:</strong> ${result.text}
+                        <br><br>
+                        <strong>Metadata:</strong>
+                        <br>Model: ${result.metadata.model}
+                        <br>Confidence: ${result.metadata.confidence}%
+                        <br>Blocks: ${result.metadata.blocks}
+                        <br>Words: ${result.metadata.words}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('OCR Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ OCR Test Failed</strong>
+                        <br><br>
+                        Error: ${error.message}
+                        <br><br>
+                        Check browser console for more details.
+                    </div>
+                `;
+            }
+        }
+
+        // Make functions global for onclick handlers
+        window.createTestImage = createTestImage;
+        window.testGrabText = testGrabText;
+    </script>
+</body>
+</html>

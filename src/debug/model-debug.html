@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>U²-Net Model Debug Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        canvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>🔍 U²-Net Model Debug Interface</h1>
+
+    <div class="debug-section">
+        <h2>Model Status</h2>
+        <div id="model-status" class="status">Checking...</div>
+        <button onclick="checkModelStatus()">Check Model</button>
+        <button onclick="downloadModel()">Download Model</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>Quick Tests</h2>
+        <button onclick="runSyntheticTest()" id="synthetic-btn" disabled>Test with Synthetic Image</button>
+        <button onclick="runRealImageTest()" id="real-btn" disabled>Test with Real Image</button>
+        <button onclick="runSensitivityTest()" id="sensitivity-btn" disabled>Test Sensitivity Range</button>
+    </div>
+
+    <div class="grid">
+        <div class="debug-section">
+            <h3>Original Image</h3>
+            <canvas id="original-canvas" width="320" height="320"></canvas>
+            <input type="file" id="file-input" accept="image/*" onchange="loadImage(event)">
+        </div>
+
+        <div class="debug-section">
+            <h3>Model Output</h3>
+            <canvas id="output-canvas" width="320" height="320"></canvas>
+            <div id="output-stats"></div>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Debug Log</h2>
+        <div id="debug-log" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script type="module">
+        import { modelValidator } from './U2NetModelValidator.ts';
+        import { u2NetService } from '../services/U2NetService.ts';
+
+        let currentImageData = null;
+
+        // Initialize
+        window.addEventListener('load', () => {
+            checkModelStatus();
+            createSyntheticImage();
+        });
+
+        async function checkModelStatus() {
+            const status = document.getElementById('model-status');
+            const buttons = ['synthetic-btn', 'real-btn', 'sensitivity-btn'];
+            
+            try {
+                const result = await modelValidator.validateModel();
+                
+                if (result.modelExists && result.modelLoaded) {
+                    status.className = 'status success';
+                    status.textContent = '✅ Model ready for use';
+                    buttons.forEach(id => document.getElementById(id).disabled = false);
+                } else if (result.modelExists) {
+                    status.className = 'status warning';
+                    status.textContent = '⚠️ Model exists but failed to load';
+                } else {
+                    status.className = 'status error';
+                    status.textContent = '❌ Model not found - click Download Model';
+                }
+                
+                log('Model validation:', result);
+                
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `❌ Error: ${error.message}`;
+                log('Validation error:', error);
+            }
+        }
+
+        async function downloadModel() {
+            log('Starting model download...');
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Downloading...';
+            
+            try {
+                // This would trigger the setup script
+                const response = await fetch('/api/setup-model', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    log('✅ Model downloaded successfully');
+                    await checkModelStatus();
+                } else {
+                    log('❌ Download failed:', result.error);
+                }
+            } catch (error) {
+                log('❌ Download error:', error.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Download Model';
+            }
+        }
+
+        function createSyntheticImage() {
+            const canvas = document.getElementById('original-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create test pattern: white circle on black background
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 320, 320);
+            
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(160, 160, 60, 0, Math.PI * 2);
+            ctx.fill();
+            
+            currentImageData = ctx.getImageData(0, 0, 320, 320);
+            log('Created synthetic test image');
+        }
+
+        async function runSyntheticTest() {
+            if (!currentImageData) {
+                log('❌ No image loaded');
+                return;
+            }
+            
+            log('Running synthetic test...');
+            
+            try {
+                const result = await u2NetService.removeBackground(currentImageData, {
+                    sensitivity: 0.5,
+                    edgeFeather: 2,
+                    preserveEdges: true
+                });
+                
+                displayResult(result);
+                log('✅ Synthetic test completed');
+                
+            } catch (error) {
+                log('❌ Synthetic test failed:', error.message);
+            }
+        }
+
+        async function runRealImageTest() {
+            if (!currentImageData) {
+                log('❌ No image loaded');
+                return;
+            }
+            
+            log('Running real image test...');
+            
+            try {
+                const sensitivities = [0.1, 0.3, 0.5, 0.7, 0.9];
+                const results = [];
+                
+                for (const sensitivity of sensitivities) {
+                    const result = await u2NetService.removeBackground(currentImageData, {
+                        sensitivity,
+                        edgeFeather: 2,
+                        preserveEdges: true
+                    });
+                    
+                    results.push({ sensitivity, result });
+                    log(`Sensitivity ${sensitivity}: completed`);
+                }
+                
+                log('Real image test results:', results);
+                
+            } catch (error) {
+                log('❌ Real image test failed:', error.message);
+            }
+        }
+
+        async function runSensitivityTest() {
+            if (!currentImageData) {
+                log('❌ No image loaded');
+                return;
+            }
+            
+            log('Running sensitivity range test...');
+            
+            try {
+                const sensitivities = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+                const results = [];
+                
+                for (const sensitivity of sensitivities) {
+                    const start = performance.now();
+                    const result = await u2NetService.removeBackground(currentImageData, {
+                        sensitivity,
+                        edgeFeather: 0,
+                        preserveEdges: false
+                    });
+                    const end = performance.now();
+                    
+                    // Analyze alpha values
+                    const alphaValues = [];
+                    for (let i = 3; i < result.imageData.data.length; i += 4) {
+                        alphaValues.push(result.imageData.data[i]);
+                    }
+                    
+                    const avgAlpha = alphaValues.reduce((a, b) => a + b, 0) / alphaValues.length;
+                    const fgPixels = alphaValues.filter(a => a > 200).length;
+                    const bgPixels = alphaValues.filter(a => a < 50).length;
+                    
+                    results.push({
+                        sensitivity,
+                        processingTime: end - start,
+                        avgAlpha: avgAlpha.toFixed(2),
+                        fgRatio: (fgPixels / alphaValues.length * 100).toFixed(1) + '%',
+                        bgRatio: (bgPixels / alphaValues.length * 100).toFixed(1) + '%'
+                    });
+                }
+                
+                log('Sensitivity test results:', results);
+                
+            } catch (error) {
+                log('❌ Sensitivity test failed:', error.message);
+            }
+        }
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('original-canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                log('Loaded image:', `${img.width}x${img.height}`);
+            };
+            img.src = URL.createObjectURL(file);
+        }
+
+        function displayResult(result) {
+            const canvas = document.getElementById('output-canvas');
+            canvas.width = result.imageData.width;
+            canvas.height = result.imageData.height;
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(result.imageData, 0, 0);
+            
+            // Display stats
+            const stats = document.getElementById('output-stats');
+            const alphaValues = [];
+            for (let i = 3; i < result.imageData.data.length; i += 4) {
+                alphaValues.push(result.imageData.data[i]);
+            }
+            
+            const avgAlpha = alphaValues.reduce((a, b) => a + b, 0) / alphaValues.length;
+            const fgPixels = alphaValues.filter(a => a > 200).length;
+            const bgPixels = alphaValues.filter(a => a < 50).length;
+            
+            stats.innerHTML = `
+                <strong>Alpha Statistics:</strong><br>
+                Average: ${avgAlpha.toFixed(2)}<br>
+                Foreground: ${(fgPixels / alphaValues.length * 100).toFixed(1)}%<br>
+                Background: ${(bgPixels / alphaValues.length * 100).toFixed(1)}%
+            `;
+        }
+
+        function log(...args) {
+            const logDiv = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('debug-log').textContent = '';
+        }
+    </script>
+</body>
+</html>

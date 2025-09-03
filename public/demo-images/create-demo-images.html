@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Demo Images</title>
+</head>
+<body>
+    <h1>Demo Image Generator</h1>
+    <p>This page creates sample demo images for the Layer Anything demo.</p>
+    
+    <canvas id="canvas" width="800" height="600" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    
+    <div>
+        <button onclick="createDocumentSample()">Create Document Sample</button>
+        <button onclick="createPortraitSample()">Create Portrait Sample</button>
+        <button onclick="createSceneSample()">Create Scene Sample</button>
+        <button onclick="createMixedSample()">Create Mixed Sample</button>
+    </div>
+    
+    <div id="downloads" style="margin-top: 20px;"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function downloadCanvas(filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        }
+        
+        function createDocumentSample() {
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Add document-like content
+            ctx.fillStyle = '#333333';
+            ctx.font = '24px Arial';
+            ctx.fillText('Sample Document Title', 50, 80);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText('This is a sample document with text content that can be', 50, 120);
+            ctx.fillText('extracted using OCR technology. The Layer Anything', 50, 145);
+            ctx.fillText('system can automatically detect and create layers for', 50, 170);
+            ctx.fillText('each text block in the document.', 50, 195);
+            
+            // Add some shapes
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(50, 220, 200, 100);
+            
+            ctx.fillStyle = '#2196F3';
+            ctx.beginPath();
+            ctx.arc(400, 270, 50, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Add more text
+            ctx.fillStyle = '#333333';
+            ctx.font = '14px Arial';
+            ctx.fillText('Additional text content for demonstration', 50, 360);
+            ctx.fillText('Multiple paragraphs and text blocks', 50, 380);
+            ctx.fillText('Perfect for OCR testing and layer extraction', 50, 400);
+            
+            downloadCanvas('document-sample.jpg');
+        }
+        
+        function createPortraitSample() {
+            // Clear canvas
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Simple portrait representation
+            ctx.fillStyle = '#DEB887';
+            ctx.beginPath();
+            ctx.arc(400, 250, 80, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Body
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(350, 320, 100, 150);
+            
+            // Background elements
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 450, 800, 150);
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(700, 100, 40, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            downloadCanvas('portrait-sample.jpg');
+        }
+        
+        function createSceneSample() {
+            // Clear canvas with sky
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Ground
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 400, 800, 200);
+            
+            // House
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(200, 250, 150, 150);
+            
+            // Roof
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.moveTo(180, 250);
+            ctx.lineTo(275, 180);
+            ctx.lineTo(370, 250);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Tree
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(480, 300, 20, 100);
+            
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(490, 280, 40, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Car
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(500, 350, 80, 40);
+            
+            // Wheels
+            ctx.fillStyle = '#333333';
+            ctx.beginPath();
+            ctx.arc(520, 390, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(560, 390, 15, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            downloadCanvas('scene-sample.jpg');
+        }
+        
+        function createMixedSample() {
+            // Clear canvas
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            // Title text
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 28px Arial';
+            ctx.fillText('Mixed Content Demo', 50, 60);
+            
+            // Subtitle
+            ctx.font = '18px Arial';
+            ctx.fillText('Text and Objects Combined', 50, 90);
+            
+            // Text block
+            ctx.font = '14px Arial';
+            ctx.fillText('This sample contains both text content and visual objects.', 50, 130);
+            ctx.fillText('Perfect for demonstrating comprehensive layer extraction', 50, 150);
+            ctx.fillText('capabilities of the Layer Anything system.', 50, 170);
+            
+            // Various shapes and objects
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(400, 120, 100, 60);
+            
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.arc(550, 150, 30, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#2196F3';
+            ctx.beginPath();
+            ctx.moveTo(650, 120);
+            ctx.lineTo(700, 120);
+            ctx.lineTo(675, 180);
+            ctx.closePath();
+            ctx.fill();
+            
+            // More text
+            ctx.fillStyle = '#333333';
+            ctx.font = '16px Arial';
+            ctx.fillText('Section 2: Object Detection', 50, 250);
+            
+            ctx.font = '14px Arial';
+            ctx.fillText('The system can identify and segment various objects:', 50, 280);
+            ctx.fillText('• Geometric shapes', 70, 300);
+            ctx.fillText('• Text regions', 70, 320);
+            ctx.fillText('• Complex objects', 70, 340);
+            
+            // Complex object representation
+            ctx.fillStyle = '#9C27B0';
+            ctx.fillRect(400, 250, 120, 80);
+            
+            ctx.fillStyle = '#FF9800';
+            ctx.beginPath();
+            ctx.arc(460, 290, 25, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Footer text
+            ctx.fillStyle = '#666666';
+            ctx.font = '12px Arial';
+            ctx.fillText('Layer Anything Demo - Advanced AI-Powered Image Layering', 50, 550);
+            
+            downloadCanvas('mixed-sample.jpg');
+        }
+        
+        // Create all images on load
+        window.onload = function() {
+            document.getElementById('downloads').innerHTML = '<p>Click the buttons above to generate and download demo images.</p>';
+        };
+    </script>
+</body>
+</html>

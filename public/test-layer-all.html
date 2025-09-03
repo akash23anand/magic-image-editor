@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Layer All Functionality</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-steps {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-steps h2 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+        .test-steps ol {
+            line-height: 1.8;
+        }
+        .expected-results {
+            background: #e8f8e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .expected-results h2 {
+            color: #008800;
+            margin-top: 0;
+        }
+        .known-issues {
+            background: #fff8e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .known-issues h2 {
+            color: #cc6600;
+            margin-top: 0;
+        }
+        .sample-image {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .sample-image img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .success {
+            color: #008800;
+            font-weight: bold;
+        }
+        .warning {
+            color: #cc6600;
+            font-weight: bold;
+        }
+        .error {
+            color: #cc0000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Layer All Functionality</h1>
+
+    <div class="instructions">
+        <h2>Overview</h2>
+        <p>This test verifies that the "Layer All" functionality properly extracts content into independent layers instead of creating overlays.</p>
+        <p><strong>Key Fix Applied:</strong> The implementation now uses <code>PixelExtractor</code> to:</p>
+        <ul>
+            <li>Extract pixels from the original image</li>
+            <li>Fill the background where content was extracted</li>
+            <li>Create independent layers that can be moved without revealing duplicates</li>
+        </ul>
+    </div>
+
+    <div class="test-steps">
+        <h2>📋 Test Steps</h2>
+        <ol>
+            <li>Navigate to <code>http://localhost:3000</code></li>
+            <li>Click the 📁 Upload button and select an image with:
+                <ul>
+                    <li>Some text content</li>
+                    <li>One or more distinct objects (person, animal, etc.)</li>
+                    <li>A clear background</li>
+                </ul>
+            </li>
+            <li>Click the ⚡ Layer Anything button in the toolbar</li>
+            <li>In the settings panel that appears, click the <strong>⚡ Layer All</strong> button</li>
+            <li>Wait for processing to complete (progress bar will show)</li>
+            <li>Once complete, try dragging the created layers around</li>
+        </ol>
+    </div>
+
+    <div class="expected-results">
+        <h2>✅ Expected Results</h2>
+        <ul>
+            <li class="success">Text should be extracted as separate layers (not overlaid)</li>
+            <li class="success">Objects should be segmented and extracted as independent layers</li>
+            <li class="success">Background should be filled where content was extracted (blur fill)</li>
+            <li class="success">Moving layers should NOT reveal duplicate content underneath</li>
+            <li class="success">Each layer should maintain its original appearance</li>
+            <li class="success">The main canvas should show the modified image with extracted areas filled</li>
+        </ul>
+    </div>
+
+    <div class="known-issues">
+        <h2>⚠️ Current Limitations</h2>
+        <ul>
+            <li class="warning">Text detection uses simple contrast-based masking (not perfect)</li>
+            <li class="warning">Object segmentation requires the SAM model (currently using placeholder)</li>
+            <li class="warning">Background filling uses simple blur (not content-aware inpainting)</li>
+            <li class="warning">RLE mask conversion is simplified</li>
+        </ul>
+    </div>
+
+    <div class="sample-image">
+        <h2>📸 Recommended Test Image</h2>
+        <p>For best results, use an image similar to this structure:</p>
+        <div style="border: 2px dashed #ccc; padding: 40px; background: white; display: inline-block;">
+            <div style="background: #f0f0f0; padding: 20px; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Some Title Text Here</h3>
+                <p style="margin: 10px 0 0 0;">Additional paragraph text content that should be extracted as one layer.</p>
+            </div>
+            <div style="background: #e0e0ff; padding: 20px; margin-bottom: 20px; text-align: center;">
+                <div style="width: 100px; height: 100px; background: #4CAF50; border-radius: 50%; margin: 0 auto;"></div>
+                <p style="margin: 10px 0 0 0;">Object (e.g., person, logo)</p>
+            </div>
+            <div style="background: #f0f0f0; padding: 10px; text-align: center;">
+                <small>Footer text - Date: 2025-08-03 | Views: 1,234</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h2>🔍 How to Verify Success</h2>
+        <ol>
+            <li><strong>Check Layer Creation:</strong> Multiple layers should appear that you can drag around</li>
+            <li><strong>Check Extraction:</strong> When you move a layer, the area behind it should be filled (not show the original content)</li>
+            <li><strong>Check Independence:</strong> Each layer should move independently without affecting others</li>
+            <li><strong>Check Background:</strong> The main canvas should show the modified image with filled areas</li>
+        </ol>
+        
+        <h3>Console Logs to Check</h3>
+        <p>Open DevTools (F12) and look for:</p>
+        <ul>
+            <li><code>[INFO] [Editor] layer_anything_complete</code> - Shows number of layers created</li>
+            <li><code>[INFO] [LayerAnythingEngine] text_layer_created</code> - For each text layer</li>
+            <li><code>[INFO] [LayerAnythingEngine] object_layer_created</code> - For each object layer</li>
+        </ul>
+    </div>
+
+    <div class="known-issues">
+        <h2>🐛 If Something Goes Wrong</h2>
+        <ul>
+            <li><strong>Page goes blank:</strong> The null mask issue has been fixed in MagicGrabLayer</li>
+            <li><strong>Layers show as overlays:</strong> Make sure the page has refreshed to load the new code</li>
+            <li><strong>No layers created:</strong> Check console for errors, ensure image has detectable content</li>
+            <li><strong>Poor extraction quality:</strong> This is expected with the current simple masking algorithms</li>
+        </ul>
+    </div>
+</body>
+</html>
